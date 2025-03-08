@@ -1,36 +1,39 @@
-// [rewrite_local]
-// ÕâÀïµÄ URL Çë¸ù¾İÊµ¼ÊÇé¿öµ÷Õû£¬È·±£Æ¥Åäµ½ĞèÒª»ñÈ¡ĞÅÏ¢µÄ½Ó¿Ú
-// Ä¿Ç°Æ¥ÅäÁË°üº¬ /user/ Â·¾¶µÄ½Ó¿Ú£¬Äã¿ÉÄÜĞèÒª¸ü¾«È·µÄÆ¥Åä
-// ^https:\/\/instax.app.xcxd.net.cn\/api\/user\/.* url script-response-body get_info.js
+// å®šä¹‰é‡å†™è§„åˆ™å‡½æ•°
+function rewriteScript(context) {
+    const url = context.requestUrl;
+    const responseBody = context.responseBody;
+    if (url.startsWith('https://instax.app.xcxd.net.cn/api')) {
+        try {
+            const jsonData = JSON.parse(responseBody);
+            let uid = jsonData.uid;
+            let userId = jsonData.user_id;
+            let auth = jsonData.Authorization;
 
-// get_info.js
-// »ñÈ¡ÏìÓ¦ÌåºÍÇëÇó URL
-let responseBody = $response.body;
-let url = $request.url;
+            let message = '';
+            if (uid) {
+                message += `uid: ${uid}\n`;
+            }
+            if (userId) {
+                message += `user_id: ${userId}\n`;
+            }
+            if (auth) {
+                message += `Auth: ${auth}\n`;
+            }
 
-try {
-    // ³¢ÊÔ½«ÏìÓ¦Ìå½âÎöÎª JSON ¸ñÊ½£¨¼ÙÉèÏìÓ¦ÊÇ JSON£©
-    let jsonData = JSON.parse(responseBody);
-
-    // ³¢ÊÔ´Ó JSON Êı¾İÖĞÌáÈ¡ uid¡¢user_id ºÍ Authorization£¨auth£©
-    let uid = jsonData.uid || 'Î´ÕÒµ½ uid';
-    let userId = jsonData.user_id || 'Î´ÕÒµ½ user_id';
-    let auth = jsonData.Authorization || 'Î´ÕÒµ½ auth';
-
-    // URL ½âÂë£¨Èç¹ûĞèÒª£©
-    uid = decodeURIComponent(uid);
-    userId = decodeURIComponent(userId);
-    auth = decodeURIComponent(auth);
-
-    // ½«ÌáÈ¡²¢½âÂëºóµÄĞÅÏ¢·ÅÈë¼ôÌù°å
-    $clipboard = `uid: ${uid}\nuser_id: ${userId}\nauth: ${auth}`;
-
-    // ·¢ËÍÍ¨Öª¸æÖªĞÅÏ¢»ñÈ¡½á¹û
-    $notify('ĞÅÏ¢»ñÈ¡³É¹¦', '»ñÈ¡µ½µÄĞÅÏ¢:', `uid: ${uid}\nuser_id: ${userId}\nauth: ${auth}`);
-} catch (error) {
-    // Èç¹û½âÎö JSON Ê§°Ü£¬´òÓ¡´íÎóĞÅÏ¢²¢·¢ËÍÍ¨Öª
-    console.log('½âÎöÏìÓ¦ÌåÊ§°Ü:', error);
-    $notify('ĞÅÏ¢»ñÈ¡Ê§°Ü', '´íÎóĞÅÏ¢:', '½âÎöÏìÓ¦ÌåÊ§°Ü£¬Çë¼ì²é½Ó¿Ú·µ»ØÊı¾İ');
+            if (message) {
+                // å¼¹çª—æé†’
+                context.$notification.post('è·å–åˆ°ç›¸å…³ä¿¡æ¯', '', message, {
+                    'update-pasteboard': message,  // å°†ä¿¡æ¯è®¾ç½®åˆ°å‰ªè´´æ¿ï¼Œæ–¹ä¾¿å¤åˆ¶
+                    'auto-dismiss': 10  // 10ç§’åè‡ªåŠ¨å…³é—­å¼¹çª—
+                });
+            }
+        } catch (e) {
+            // è§£ææ•°æ®å‡ºé”™æ—¶çš„å¤„ç†
+            console.log(`è§£æå“åº”æ•°æ®å‡ºé”™: ${e}`);
+        }
+    }
+    return responseBody;
 }
 
-$done({});
+// å¯¼å‡ºé‡å†™è§„åˆ™
+$httpClient.onResponseComplete(rewriteScript);
